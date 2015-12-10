@@ -1,0 +1,106 @@
+package wordRecommendation;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
+import org.apache.hadoop.mapreduce.lib.jobcontrol.JobControl;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+
+public class StubDriver {
+
+	public static void main(String[] args) throws Exception {
+		if (args.length != 2) {
+			System.out.printf("Usage: StubDriver <input dir> <output dir>\n");
+			System.exit(-1);
+		}
+		JobControl jobCtrl = new JobControl("mygrp");
+		
+		JobConf conf = new JobConf();
+		Job job = Job.getInstance(conf, "wordrecommendation1");
+		job.setJarByClass(StubDriver.class);
+		job.setMapperClass(StubMapper.class);
+		job.setReducerClass(StubReducer.class);
+		
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
+		//job.setNumReduceTasks(3);
+		//job.setInputFormatClass(FixedLengthInputFormat.class);
+		//FixedLengthInputFormat.setRecordLength(conf, 15);
+		
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1] + "-tmp"));
+		ControlledJob cJob = new ControlledJob(conf);
+		cJob.setJob(job);
+		
+		Job job2 = Job.getInstance(conf, "wordrecommendation2");
+		job2.setJarByClass(StubDriver.class);
+		job2.setMapperClass(CountMapper.class);
+		job2.setReducerClass(CountReducer.class);
+		
+		job2.setOutputKeyClass(Text.class);
+		job2.setOutputValueClass(LongWritable.class);
+		job2.setMapOutputKeyClass(Text.class);
+		job2.setMapOutputValueClass(LongWritable.class);
+		
+		FileInputFormat.addInputPath(job2, new Path(args[1] + "-tmp"));
+		FileOutputFormat.setOutputPath(job2, new Path(args[1]+ "-tmp1"));		
+		ControlledJob cJob2 = new ControlledJob(conf);
+		cJob2.setJob(job2);		
+		cJob2.addDependingJob(cJob);
+		
+		Job job3 = Job.getInstance(conf, "wordrecommendation3");
+		job3.setJarByClass(StubDriver.class);
+		job3.setMapperClass(StubMapper3.class);
+		job3.setReducerClass(StubReducer3.class);
+		
+		job3.setOutputKeyClass(Text.class);
+		job3.setOutputValueClass(Text.class);
+		job3.setMapOutputKeyClass(LongWritable.class);
+		job3.setMapOutputValueClass(Text.class);
+		job3.setSortComparatorClass(LongWritable.DecreasingComparator.class);
+		
+		FileInputFormat.addInputPath(job3, new Path(args[1] + "-tmp1"));
+		FileOutputFormat.setOutputPath(job3, new Path(args[1] + "-tmp2"));		
+		ControlledJob cJob3 = new ControlledJob(conf);
+		cJob3.setJob(job3);		
+		cJob3.addDependingJob(cJob2);
+		
+		Job job4 = Job.getInstance(conf, "wordrecommendation4");
+		job4.setJarByClass(StubDriver.class);
+		job4.setMapperClass(StubMapper4.class);
+		job4.setReducerClass(StubReducer4.class);
+		
+		job4.setOutputKeyClass(Text.class);
+		job4.setOutputValueClass(Text.class);
+		job4.setMapOutputKeyClass(Text.class);
+		job4.setMapOutputValueClass(Text.class);
+				
+		FileInputFormat.addInputPath(job4, new Path(args[1] + "-tmp2"));
+		FileOutputFormat.setOutputPath(job4, new Path(args[1]));		
+		ControlledJob cJob4 = new ControlledJob(conf);
+		cJob4.setJob(job4);		
+		cJob4.addDependingJob(cJob3);
+		
+		jobCtrl.addJob(cJob);
+		jobCtrl.addJob(cJob2);
+		jobCtrl.addJob(cJob3);
+		jobCtrl.addJob(cJob4);
+		
+		Thread thread = new Thread(jobCtrl);
+		thread.start();
+
+		while (!jobCtrl.allFinished()) {
+			System.out.println("Still running...");
+			Thread.sleep(5000);
+		}
+//		System.exit(result ? 0 : 1);
+		
+		//hadoop jar rc-mr.jar my.StubDriver /data/mr/wordcount/big.txt Rohit/WordCountMR
+	}
+}
