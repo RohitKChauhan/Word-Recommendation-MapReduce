@@ -1,0 +1,83 @@
+package wordRecommendation;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class StubReducer4 extends Reducer<Text, Text, Text, Text> {
+
+  @Override
+  public void reduce(Text key, Iterable<Text> values, Context context)
+      throws IOException, InterruptedException {
+	  String finalWordRecommendations ="";
+	  int iCount = 0;
+	  String[] topWords = new String[3];
+	  topWords[0]="";
+	  topWords[1]="";
+	  topWords[2]="";
+	  Boolean bValueUsed = false;
+	  for(Text value:values)
+	  {		
+		  //String[] words = value.toString().split(":");
+		  iCount=Integer.parseInt(value.toString().substring(value.toString().indexOf(":")+1));
+		  
+		  if (topWords[0].isEmpty())
+		  {
+			  	topWords[0]=value.toString();	
+			  	bValueUsed=true;
+		  }
+		  else
+		  {
+			  if(iCount > Integer.parseInt(topWords[0].substring(topWords[0].indexOf(":")+1)))
+			  {
+				  topWords[2]=topWords[1];
+				  topWords[1]=topWords[0];
+				  topWords[0]=value.toString();
+				  bValueUsed=true;
+			  }
+		  }
+		  
+		  if(!bValueUsed)
+		  {
+			  if (topWords[1].isEmpty())
+			  {
+				  topWords[1]=value.toString();			
+				  bValueUsed=true;
+			  }
+			  else
+			  {
+				  if(iCount>Integer.parseInt(topWords[1].substring(topWords[1].indexOf(":")+1)))
+				  {
+					  topWords[2]=topWords[1];
+					  topWords[1]=value.toString();
+					  bValueUsed=true;
+				  }
+			  }
+		  }
+		  
+		  if(!bValueUsed)
+		  {
+			  if (topWords[2].isEmpty()) 
+				  topWords[2]=value.toString();
+			  else
+			  {
+				  if(iCount>Integer.parseInt(topWords[2].substring(topWords[2].indexOf(":")+1)))
+				  {
+					  topWords[2]=value.toString();
+				  }
+			  }
+		  }
+		  bValueUsed=false;
+	  }
+	  
+	  if (!topWords[0].isEmpty())
+		  finalWordRecommendations= topWords[0].substring(0, topWords[0].indexOf(":")) ;
+	  if (!topWords[1].isEmpty())
+		  finalWordRecommendations= finalWordRecommendations + " " + topWords[1].substring(0, topWords[1].indexOf(":")) ;
+	  if (!topWords[2].isEmpty())
+		  finalWordRecommendations= finalWordRecommendations + " " + topWords[2].substring(0, topWords[2].indexOf(":")) ;
+			  
+	  context.write(key, new Text(finalWordRecommendations)); 
+	  System.out.println("reducer");	  
+  }
+}
