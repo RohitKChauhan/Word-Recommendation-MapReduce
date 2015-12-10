@@ -1,0 +1,21 @@
+package wordRecommendation;
+import java.io.IOException;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class StubReducer3 extends Reducer<LongWritable, Text, Text, Text> {
+
+  @Override
+  public void reduce(LongWritable key, Iterable<Text> values, Context context)
+      throws IOException, InterruptedException {
+	  //5	box:at box:to a:to
+	  for(Text value:values)
+	  {		
+		  String[] words = value.toString().split(":");
+		  context.write(new Text(words[0]), new Text(words[1] + ":" + key));
+	  }
+	  System.out.println("reducer");	  
+  }
+}
